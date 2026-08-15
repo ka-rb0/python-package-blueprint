@@ -1,0 +1,68 @@
+# Publishes a tagged release to PyPI via Trusted Publishing (OIDC) - no API
+# token stored or rotated. Only fires when a GitHub Release is published
+# (hatch-vcs derives the version from the tag the release points at - see
+# [tool.hatch.version] in pyproject.toml), and only runs against the
+# `production` environment, so an OIDC token is only ever minted for a run
+# that environment's protection rules (repo Settings -> Environments) have
+# allowed through - not merely to anyone with push access to this repo.
+#
+# Registered as a Trusted Publisher on PyPI against:
+#   owner: ka-rb0, repository: python-package-blueprint,
+#   workflow: publish.yml, environment: production
+# Changing this filename or the environment name below needs a matching
+# update on PyPI's "Manage" -> "Publishing" page for the project, or
+# publishing will fail with a Trusted Publisher mismatch.
+#
+# No lint/test/build gate in this workflow itself - by design it relies on
+# ci.yml already having passed on the commit a release tag points at (branch
+# protection on main should enforce that). It does still build fresh
+# sdist/wheel here rather than reusing ci.yml's, so what gets uploaded is
+# built from exactly the tagged commit.
+#
+# Same pinning rules as ci.yml: actions pinned to commit SHAs, kept current
+# by Dependabot (.github/dependabot.yml).
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+# A publish should never be interrupted mid-upload.
+concurrency:
+  group: ${{ github.workflow }}
+
+permissions:
+  contents: read
+  # Exchanged for a short-lived PyPI upload credential via Trusted
+  # Publishing - see the `uv publish` step below.
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: https://pypi.org/project/python-package-blueprint/
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: pyproject.toml
+      # No enable-cache here (unlike ci.yml/audit.yml): this run ends in a
+      # real PyPI publish with id-token:write, so it deliberately skips the
+      # shared actions cache to avoid a cache-poisoning risk (a lower-
+      # privileged run poisoning the cache, this one consuming it) - flagged
+      # by zizmor. One run per release; the speed cost isn't worth it here.
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: false
+      - name: Build sdist and wheel
+        run: uv build
+      # --trusted-publishing always: fail loudly if the OIDC exchange isn't
+      # available/configured, rather than silently falling back to some
+      # other (absent) credential.
+      - name: Publish to PyPI
+        run: uv publish --trusted-publishing always
