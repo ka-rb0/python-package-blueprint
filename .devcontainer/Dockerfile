@@ -1,6 +1,41 @@
 # syntax=docker/dockerfile:1
 
-FROM python:slim AS dev
+# uv installs the locked dependencies below. A named stage rather than a
+# direct COPY --from=<image>: Dependabot only bumps FROM lines.
+FROM ghcr.io/astral-sh/uv:0.12.3@sha256:2d890623d310b57771ce840f0da5eed5fc6d657da05ffaa45d82797b53fa3abc AS uv
+
+# Node.js comes from the official image - digest-pinned and Dependabot-bumped
+# like the other base images. The Debian release (trixie) matches the Python
+# image, so the copied binary finds matching shared libraries. The major must
+# match engines.node in package.json; tests/test_node_version_consistency.py
+# enforces that.
+FROM node:26-slim@sha256:4ebb5ace66f15a24c14c492e01a8beeed4fddf970a856109f5126e703e5fe503 AS node
+
+# Pinned to the same Python line as requires-python in pyproject.toml;
+# Dependabot bumps both tags and digests (see .github/dependabot.yml).
+FROM python:3.14-slim@sha256:a7fb1e634c4a578f9e0bd6327f11a3cde11b7a9395f48e24360c0988bcc5c2bc AS base
+
+COPY --from=uv /uv /uvx /usr/local/bin/
+
+# Deliberately no `apt-get full-upgrade` here: the digest above is the single
+# source of this image's package versions, so builds stay reproducible.
+# Debian security patches arrive as Dependabot digest bumps (upstream rebuilds
+# the Python images on base-image updates) instead of drifting in unpinned at
+# build time - merge those weekly PRs promptly.
+
+# Install the runtime Python packages ([project.dependencies], which
+# --no-default-groups narrows the sync to) at the exact versions in uv.lock
+# (the single source of truth) into the system interpreter - no venv
+# indirection inside a container. Bind mounts (BuildKit) keep the lockfiles
+# out of image layers. --inexact keeps what uv didn't install (pip). ENV,
+# not ARG: child stages run uv sync against the same environment.
+ENV UV_PROJECT_ENVIRONMENT=/usr/local
+RUN --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    uv sync --locked --no-cache --inexact --no-default-groups
+
+# The dev and agent stages form the desktop-development branch.
+FROM base AS dev
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -11,8 +46,33 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     fd-find \
     dos2unix \
+    libatomic1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js from the pinned source stage. npm/npx are standard symlinks
+# into the bundled node_modules/npm and are recreated because COPY would
+# dereference them.
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
+
+# npm-based lint/format tools at the exact versions in package-lock.json.
+# Install to a fixed prefix rather than /workspace, which the devcontainer
+# hides behind a bind mount.
+COPY package.json package-lock.json /opt/npm-tools/
+RUN npm ci --prefix /opt/npm-tools --no-audit --no-fund \
+    && npm cache clean --force
+ENV PATH="/opt/npm-tools/node_modules/.bin:${PATH}"
+# Let Node-based config files resolve packages from the baked-in prefix.
+ENV NODE_PATH=/opt/npm-tools/node_modules
+
+# Install the dev Python packages (pytest, mypy, ruff, etc.) at the
+# exact versions in uv.lock.
+RUN --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    uv sync --locked --no-cache --inexact
 
 FROM dev AS agent
 

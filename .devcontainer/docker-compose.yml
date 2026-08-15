@@ -45,7 +45,7 @@ services:
       # to whatever `gh auth login` stored. Git authenticates separately
       # through the credential helper the Dev Containers extension installs;
       # the two stay independent unless `gh auth setup-git` is run.
-      GH_TOKEN: ${GH_TOKEN_FWB:-}
+      GH_TOKEN: ${GH_TOKEN_PPB:-}
     # No privilege escalation via setuid binaries, and drop the raw-socket capability.
     security_opt:
       - no-new-privileges:true
