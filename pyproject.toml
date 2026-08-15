@@ -1,0 +1,161 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "python-package-blueprint"
+# Derived from git tags at build time (see [tool.hatch.version] below) -
+# nothing to hand-bump, nothing that can drift out of sync with a release.
+dynamic = ["version"]
+description = "A Python package blueprint."
+readme = "README.md"
+requires-python = "==3.14.*"
+license = "MIT"  # PEP 639 license expression
+license-files = ["LICENSE"]
+classifiers = [
+  "Programming Language :: Python :: 3.14",
+  "Typing :: Typed",  # src/example_package/py.typed ships type info - PEP 561
+]
+# What the package itself needs at run time. Standards-level metadata
+# (PEP 621) rather than a dependency group, so every tool that reads PEP 621
+# metadata - SBOM generators, dependency scanners - sees the runtime
+# requirements too. Exact versions are pinned in uv.lock (kept current by
+# Dependabot); these are floors. Install without the dev tooling:
+# `uv sync --no-default-groups`.
+dependencies = [
+  "pydantic>=2.13.4",
+]
+
+[project.scripts]
+example-package = "example_package.cli:main"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+# "python-package-blueprint" (this template's own name - not a real package
+# name to keep) doesn't normalize to the "example_package" import name below,
+# so hatchling needs the mapping spelled out explicitly.
+packages = ["src/example_package"]
+
+[dependency-groups]
+# Development-only dependencies (PEP 735) - runtime requirements live in
+# [project.dependencies] above. Exact versions are pinned in uv.lock, same as
+# above. Install with `uv sync` (runtime + all dev tools) or
+# `uv sync --only-group <name>` (that group alone). The devcontainer base
+# images already ship the dev tools.
+lint = [
+  "codespell>=2.4.2",
+  "ruff>=0.16.0",
+  # pip-audit checks the locked python packages against known-CVE databases
+  "pip-audit>=2.9.0",
+  # zizmor lints the GitHub Actions workflows for security footguns
+  "zizmor>=1.28.0",
+]
+release = [
+  # twine uploads the built sdist/wheel to a package index -
+  # scripts/dev_local_simulation uses it to publish to the pypiserver in
+  # .devcontainer/docker-compose.yml.
+  "twine>=6.2.0",
+]
+dev = [
+  { include-group = "lint" },
+  { include-group = "release" },
+  "hypothesis>=6.165.2",
+  "mypy>=2.2.0",
+  "pytest>=9.1.1",
+  "pytest-cov>=7.0.0",
+  "pyyaml>=6.0.3",
+  "types-pyyaml>=6.0.12",
+]
+
+[tool.codespell]
+# single source of truth for the skip list - run as plain `codespell .`
+# (lockfiles are machine-generated: hashes and package names trip the checker)
+# (codespell does not read .gitignore, so it needs its own entries)
+skip = "./.git,./node_modules,./.venv,./.pytest_cache,./.ruff_cache,./.mypy_cache,./.hypothesis,./uv.lock,./package-lock.json,./shared_folder/data"
+
+[tool.ruff]
+exclude = [".claude/"]
+# no target-version: ruff infers it from requires-python - one source of truth
+line-length = 88  # same as black
+
+[tool.ruff.lint]
+extend-select = [
+  "UP",    # pyupgrade
+  "I",     # isort
+  "E",     # Enforce PEP8 error codes (e.g., indentation, line breaks)
+  "F",     # Flake8 codes (undefined names, unused imports, etc.)
+  "B",     # Bugbear for finding more complex bugs
+  "D",     # Pydocstyle for docstring conventions
+  "N",     # Naming conventions (pep8-naming)
+  "W",     # PEP8 warnings (whitespace, deprecation)
+  "C",     # C4 (flake8-comprehensions) + C90 (McCabe cyclomatic complexity)
+  "A",     # https://docs.astral.sh/ruff/rules/#flake8-builtins-a
+  "YTT",   # flake8-2020: misuse of sys.version / sys.version_info
+  "ASYNC", # Async checks
+  "ICN",   # Import conventions
+  "LOG",   # Logging conventions
+  "G",     # Logging format
+  "PIE",   # https://docs.astral.sh/ruff/rules/#flake8-pie-pie
+  "S",     # Security checks (bandit rules)
+  "T20",   # don't allow print statements
+  "RUF",   # ruff-native rules (unused noqa, ambiguous unicode, ...)
+  "SIM",   # flake8-simplify: collapsible ifs, needless bools, ...
+  #"PT",    # Pytest checks (consider enabling it soon)
+  #"EM",    # https://docs.astral.sh/ruff/rules/#flake8-errmsg-em
+  #"PL",    # Pylint rules (if you want even more strictness)
+  #"COM",   # https://docs.astral.sh/ruff/rules/#flake8-commas-com
+  #"ANN",   # Enforce type hints (annotations) # mypy covers type errors; ANN would additionally force annotations everywhere
+]
+ignore = [
+  "E501",   # line-too-long - `ruff format` handles line length where it can
+  "D100",   # missing docstring in public module
+  "D101",   # missing docstring in public class
+  "D102",   # missing docstring in public method
+  "D103",   # missing docstring in public function
+  "D104",   # missing docstring in public package
+  "D203",   # conflicts with D211
+  "D212",   # conflicts with D213 which is better
+  "D413",   # missing blank line after last section
+  "G004",   # Logging statement uses f-string
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S"]
+
+[tool.mypy]
+# Run as plain `mypy` after `uv sync` (needs the project package and pytest
+# importable). No python_version: mypy uses the running interpreter, which
+# requires-python pins to the same line - one source of truth.
+files = ["src", "tests"]
+mypy_path = "src"  # so `example_package.*` imports resolve without PYTHONPATH (CI)
+strict = true
+
+[[tool.mypy.overrides]]
+# be more lenient on tests so that test code stays cheap to write
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]  # so tests can import `example_package.*` without PYTHONPATH (CI)
+markers = [
+  # deselect with `pytest -m 'not online'` (what `scripts/test --offline` runs)
+  "online: needs outbound internet access (add it to tests that call a real network service)",
+]
+
+[tool.coverage.run]
+# source = ["example_package"] is the *package* name, not a path: it resolves
+# regardless of cwd, a path wouldn't necessarily.
+source = ["example_package"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+# 100 is honest while the package is this small - grow it deliberately as
+# real code arrives (one source of truth: CI and the pre-push hook both run
+# plain `pytest --cov`).
+fail_under = 100

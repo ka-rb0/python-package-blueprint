@@ -1,0 +1,26 @@
+{
+  "name": "Python Package Blueprint",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "master",
+  "workspaceFolder": "/workspace",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python"
+      },
+      "extensions": [
+        "ms-python.python",
+        "anthropic.claude-code",
+        "openai.chatgpt"
+      ]
+    }
+  },
+  // Activate the committed git hooks (.githooks/pre-push guards every push)
+  // - the one piece of per-clone setup git can't inherit from the repo.
+  // Dependencies need no such step: they are baked into the agent target in
+  // .devcontainer/Dockerfile at the exact versions in the lockfiles.
+  // The setting lands in .git/config on the bind mount, so it also covers
+  // git usage from the host. Clones used outside the devcontainer activate
+  // it manually: git config core.hooksPath .githooks
+  "postCreateCommand": "git config core.hooksPath .githooks"
+}

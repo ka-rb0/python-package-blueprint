@@ -1,0 +1,25 @@
+#!/bin/sh
+# The full test suite - the same pytest invocation CI's test job uses (mypy
+# lives in CI's lint job, same split as scripts/lint / scripts/test here),
+# with coverage measured and enforced ([tool.coverage.*] in pyproject.toml is
+# the single source of truth).
+#
+# `scripts/test --offline` deselects the tests marked `online` (the ones that
+# need outbound internet access) so an offline run stays green instead of
+# skipping or timing out on the network.
+. "$(dirname -- "$0")/lib.sh"
+
+# Matching "$*" (the whole argument list), not "$1": extra arguments after
+# --offline hit the usage error instead of being silently dropped. Arguments
+# are deliberately not forwarded to pytest - a partial run (say -k) would
+# just trip the enforced coverage threshold; run pytest directly for that.
+case "$*" in
+  --offline) check uv run pytest --cov -m "not online" ;;
+  "") check uv run pytest --cov ;;
+  *)
+    echo "usage: $script_name [--offline]" >&2
+    exit 2
+    ;;
+esac
+
+summary

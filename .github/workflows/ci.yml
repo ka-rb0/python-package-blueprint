@@ -1,0 +1,112 @@
+# Runs on every push and pull request: the same lint and test gates
+# scripts/lint and scripts/test run locally (and the pre-push hook runs
+# before every push - see .githooks/pre-push). Same tools, listed as
+# separate steps on purpose - per-step names, logs and timings in the
+# Actions UI beat deduplicating into a single `scripts/lint` call - keep the
+# two lists in sync.
+#
+# Same pinning rules as audit.yml: actions pinned to commit SHAs, kept
+# current by Dependabot (.github/dependabot.yml).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A new push on the same branch/PR supersedes an in-flight run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# The jobs only read the repo and build in-memory artifacts - grant the
+# workflow token the minimum.
+permissions:
+  contents: read
+
+env:
+  # Without this, `uv run` would implicitly re-sync the default (dev) group
+  # on every invocation, undoing the explicit `uv sync` step below.
+  UV_NO_SYNC: "1"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: pyproject.toml
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+      - name: Install Python dev tools
+        run: uv sync --locked
+      # engines.node in package.json pins the version below (see
+      # tests/test_node_version_consistency.py).
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: package.json
+      - name: Install npm tools
+        run: npm ci
+      - name: ruff check
+        run: uv run ruff check .
+      - name: ruff format
+        run: uv run ruff format --check .
+      - name: codespell
+        run: uv run codespell .
+      - name: prettier
+        run: npx prettier --check .
+      - name: markdownlint
+        run: npx markdownlint-cli2
+      # Offline here (no GH_TOKEN, no network in this job) - audit.yml runs
+      # zizmor's online audits separately, on a schedule.
+      - name: zizmor (offline)
+        run: uv run zizmor --offline .github/workflows/
+      - name: mypy
+        run: uv run mypy
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: pyproject.toml
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --locked
+      - name: pytest
+        run: uv run pytest --cov
+
+  # The lint/test jobs run against the *installed* project (`uv sync`
+  # installs it in editable mode); this job separately proves the built
+  # artifacts a real `pip install` would use also work.
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: pyproject.toml
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+      - name: Build sdist and wheel
+        run: uv build
+      - name: Verify the wheel installs and the console script runs
+        run: |
+          uv run --isolated --no-project --with dist/*.whl -- \
+            example-package greet "CI"
