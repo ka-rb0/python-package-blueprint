@@ -52,8 +52,15 @@ lint = [
   # zizmor lints the GitHub Actions workflows for security footguns
   "zizmor>=1.28.0",
 ]
+release = [
+  # twine uploads the built sdist/wheel to a package index -
+  # scripts/dev_local_simulation uses it to publish to the pypiserver in
+  # .devcontainer/docker-compose.yml.
+  "twine>=6.2.0",
+]
 dev = [
   { include-group = "lint" },
+  { include-group = "release" },
   "hypothesis>=6.165.2",
   "mypy>=2.2.0",
   "pytest>=9.1.1",

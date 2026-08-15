@@ -53,15 +53,27 @@ services:
       - NET_RAW
     networks:
       - ppb-network
+    depends_on:
+      - pypiserver
     command: sleep infinity
 
-pypiserver:
-  image: pypiserver/pypiserver:latest
-  volumes:
-    - ppb-python-packages:/data/packages # pre-build packages directory
-  networks:
-    - ppb-network
-  #command: 'run --verbose --passwords ? --authenticate "download,list,update"'
+  # A local package index for scripts/dev_local_simulation to publish to -
+  # lets a build be smoke-tested (`pip install --index-url
+  # http://pypiserver:8080/simple/ ...`) without touching the real PyPI or
+  # burning a git tag. Only reachable from other containers on ppb-network
+  # (no `ports:` here), so it's not exposed to the host or beyond.
+  pypiserver:
+    image: pypiserver/pypiserver:latest
+    volumes:
+      - ppb-python-packages:/data/packages # pre-build packages directory
+    networks:
+      - ppb-network
+    # -a . -P .: disable auth entirely (pypiserver otherwise requires it for
+    # uploads by default, even with no --passwords file) - fine for a
+    # container-network-only, throwaway dev index. Lock it down with e.g.
+    # 'run --verbose --passwords ? --authenticate "download,list,update"' 
+    # to use passwords.
+    command: run --verbose -a . -P . /data/packages
 
 networks:
   ppb-network:

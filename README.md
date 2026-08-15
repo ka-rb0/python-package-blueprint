@@ -53,6 +53,13 @@ npm ci     # prettier / markdownlint-cli2, from package-lock.json
 |                 | tests marked `online`).                                   |
 | `scripts/audit` | Security audits that need network access.                 |
 
+## Special commands
+
+### For local simulation (manual, by-hand checks)
+
+- `scripts/dev_local_simulation`
+  - Builds the package and publishes it to the local pypiserver in `.devcontainer/docker-compose.yml`, then installs and runs that build - a manual, by-hand check.
+
 ## Using this as a template
 
 1. Rename `src/example_package/` to your real package name and delete the

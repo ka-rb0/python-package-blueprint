@@ -1,0 +1,47 @@
+#!/bin/sh
+# Manual smoke test: build the package, publish it to the pypiserver
+# container (.devcontainer/docker-compose.yml), then install *that* build
+# back and run it - proof the packaging story works end to end without
+# pushing a git tag (hatch-vcs derives the version from one) or touching the
+# real PyPI. Not run by CI or the pre-push hook - CI does its own equivalent
+# check (see the "build" job in .github/workflows/ci.yml), this is for you
+# to run by hand whenever you want to see it for yourself.
+#
+# Needs the pypiserver service up - it starts automatically alongside this
+# devcontainer (`master` depends on it in docker-compose.yml). Reachable at
+# PYPISERVER_URL, which defaults to its Compose DNS name on ppb-network.
+. "$(dirname -- "$0")/lib.sh"
+
+: "${PYPISERVER_URL:=http://pypiserver:8080}"
+
+# One function, not separate `check`s: each step only makes sense if the one
+# before it succeeded (installing a package that failed to upload, or
+# uploading a stale/missing dist/, would be a confusing false failure).
+build_publish_and_install() {
+  rm -rf dist &&
+    uv build &&
+    # twine's --skip-existing needs the repository to be recognizable as
+    # (Test)PyPI, which a local pypiserver isn't - so a rerun on an
+    # unchanged tree (hatch-vcs only bumps the version on a new commit or
+    # tag) fails re-uploading the same version. Delete it from
+    # ppb-python-packages (or just make a commit) to try again.
+    uv run twine upload \
+      --repository-url "$PYPISERVER_URL" --username '' --password '' dist/* &&
+    # -u PYTHONPATH: docker-compose.yml puts /workspace/src on PYTHONPATH for
+    # everyday `import example_package`, which would silently shadow the
+    # installed package below and defeat the point of this check.
+    # --index adds pypiserver ahead of the default index, so the package
+    # itself comes from there while its dependencies (e.g. pydantic) still
+    # resolve from the real PyPI. --prerelease=allow: hatch-vcs versions are
+    # dev releases until the first git tag. --refresh-package: always fetch
+    # the copy just uploaded, not a stale cached one from an earlier run.
+    env -u PYTHONPATH uv run --isolated --no-project \
+      --index "$PYPISERVER_URL/simple/" --prerelease allow \
+      --refresh-package python-package-blueprint \
+      --with python-package-blueprint \
+      -- example-package greet "manual-build-test"
+}
+
+check build_publish_and_install
+
+summary
