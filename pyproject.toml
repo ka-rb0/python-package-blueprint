@@ -38,6 +38,21 @@ source = "vcs"
 # so hatchling needs the mapping spelled out explicitly.
 packages = ["src/example_package"]
 
+[tool.hatch.build.targets.sdist]
+# An explicit allowlist rather than an exclude list. Hatchling's default
+# sdist selection is "everything git-tracks" - fine for reproducibility, but
+# it drags in devcontainer/CI/lint tooling that a downstream build or
+# `pip download --no-binary` has no use for and that only grows over time as
+# an exclude list would need to keep chasing. Only what's needed to build the
+# wheel and satisfy [project] metadata belongs here: the source, and
+# README.md/LICENSE because `readme` and `license-files` above point at them
+# (hatchling needs them present to reproduce that metadata from the sdist).
+include = [
+  "src/example_package",
+  "README.md",
+  "LICENSE",
+]
+
 [dependency-groups]
 # Development-only dependencies (PEP 735) - runtime requirements live in
 # [project.dependencies] above. Exact versions are pinned in uv.lock, same as
