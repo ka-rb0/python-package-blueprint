@@ -10,6 +10,7 @@ __pycache__/
 htmlcov/
 venv/
 .venv/
+dist/
 
 # Editor / OS
 # (.vscode/settings.json is deliberately tracked; ignore the rest)

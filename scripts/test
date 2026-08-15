@@ -1,12 +1,12 @@
 #!/bin/sh
-# The full test suite - the same pytest invocation CI's test job uses (CI
-# additionally runs mypy there; scripts/lint covers that here): API tests +
-# Playwright E2E against a live uvicorn server, with coverage measured and
-# enforced ([tool.coverage.*] in pyproject.toml is the single source of truth).
+# The full test suite - the same pytest invocation CI's test job uses (mypy
+# lives in CI's lint job, same split as scripts/lint / scripts/test here),
+# with coverage measured and enforced ([tool.coverage.*] in pyproject.toml is
+# the single source of truth).
 #
 # `scripts/test --offline` deselects the tests marked `online` (the ones that
-# need outbound internet, e.g. the Swagger UI CDN) so an offline run stays
-# green instead of skipping or timing out on the network.
+# need outbound internet access) so an offline run stays green instead of
+# skipping or timing out on the network.
 . "$(dirname -- "$0")/lib.sh"
 
 # Matching "$*" (the whole argument list), not "$1": extra arguments after

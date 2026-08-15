@@ -26,7 +26,7 @@ fi
 
 require_npm_tools() {
   missing=""
-  for tool in prettier eslint markdownlint-cli2; do
+  for tool in prettier markdownlint-cli2; do
     command -v "$tool" >/dev/null 2>&1 || missing="$missing $tool"
   done
   if [ -n "$missing" ]; then

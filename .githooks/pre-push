@@ -1,0 +1,11 @@
+#!/bin/sh
+# Guards every push with the same gates CI runs: scripts/lint then
+# scripts/test. Activated by `git config core.hooksPath .githooks` - the
+# devcontainer does this automatically (devcontainer.json's
+# postCreateCommand); clones used outside the devcontainer opt in manually
+# with the same command. POSIX sh, same dialect as scripts/lib.sh.
+set -e
+
+cd "$(dirname -- "$0")/.."
+scripts/lint
+scripts/test

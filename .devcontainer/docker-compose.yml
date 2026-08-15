@@ -55,13 +55,13 @@ services:
       - ppb-network
     command: sleep infinity
 
-  pypiserver:
-    image: pypiserver/pypiserver:latest
-    volumes:
-      - ppb-python-packages:/data/packages # pre-build packages directory
-    networks:
-      - ppb-network
-    #command: 'run --verbose --passwords ? --authenticate "download,list,update"'
+pypiserver:
+  image: pypiserver/pypiserver:latest
+  volumes:
+    - ppb-python-packages:/data/packages # pre-build packages directory
+  networks:
+    - ppb-network
+  #command: 'run --verbose --passwords ? --authenticate "download,list,update"'
 
 networks:
   ppb-network:
