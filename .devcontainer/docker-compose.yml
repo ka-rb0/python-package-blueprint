@@ -63,7 +63,7 @@ services:
   # burning a git tag. Only reachable from other containers on ppb-network
   # (no `ports:` here), so it's not exposed to the host or beyond.
   pypiserver:
-    image: pypiserver/pypiserver:latest
+    image: pypiserver/pypiserver:v2.4@sha256:e935e19433ef7a21801a8f11929b0c07cc5717f9a9e38d8581dc51e92a98abc0
     volumes:
       - ppb-python-packages:/data/packages # pre-build packages directory
     networks:
@@ -73,7 +73,7 @@ services:
     # container-network-only, throwaway dev index. Lock it down with e.g.
     # 'run --verbose --passwords ? --authenticate "download,list,update"'
     # to use passwords.
-    command: run --verbose -a . -P . /data/packages
+    command: run --verbose --overwrite -a . -P . /data/packages
 
 networks:
   ppb-network:
