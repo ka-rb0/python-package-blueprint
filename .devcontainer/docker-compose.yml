@@ -1,0 +1,76 @@
+x-development-build: &development_build
+  context: ..
+  dockerfile: .devcontainer/Dockerfile
+
+services:
+  master:
+    build:
+      # Build from the repo root so the lockfiles are available, and stop at
+      # the desktop agent stage. The distribution branch is not built.
+      <<: *development_build
+      target: agent
+    # A real PID 1 that reaps orphans - `sleep infinity` doesn't, and a
+    # devcontainer spawns many short-lived processes (VS Code server, test
+    # runs, agent CLIs).
+    init: true
+    # ${VAR:?} makes a missing .env fail fast with a clear message instead of
+    # a cryptic interpolation error - see .env.example for the expected values.
+    volumes:
+      # persistent host dir mappings
+      - ..:/workspace
+      - ${DATA_PATH_HOST:?-../shared_folder/data}:${DATA_PATH_DOCKER:?set it in .devcontainer/.env, see .env.example}
+      # persistent virtual drive mappings
+      - ppb-claude-home:/root/.claude
+      - ppb-codex-home:/root/.codex
+      # Anonymous volumes: keep these container-generated directories from
+      # syncing back to the host.
+      - /workspace/.pytest_cache
+      - /workspace/.ruff_cache
+      - /workspace/.mypy_cache
+      - /workspace/.venv
+      - /workspace/node_modules
+    environment:
+      # No "${PYTHONPATH}:" prefix: an empty leading entry would put the
+      # current working directory on sys.path.
+      PYTHONPATH: /workspace/src
+      # Don't write .pyc files (__pycache__ directories).
+      PYTHONDONTWRITEBYTECODE: 1
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: ${LOG_FORMAT:-text}
+      DATA_PATH: ${DATA_PATH_DOCKER}
+      # The GitHub CLI's token, so `gh` needs no interactive login. Its own
+      # state lives in /root/.config, which no volume above persists, so a
+      # rebuild - or any edit to .env, which recreates the container - would
+      # otherwise log it out again. Empty when unset, which makes gh fall back
+      # to whatever `gh auth login` stored. Git authenticates separately
+      # through the credential helper the Dev Containers extension installs;
+      # the two stay independent unless `gh auth setup-git` is run.
+      GH_TOKEN: ${GH_TOKEN_FWB:-}
+    # No privilege escalation via setuid binaries, and drop the raw-socket capability.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - NET_RAW
+    networks:
+      - ppb-network
+    command: sleep infinity
+
+  pypiserver:
+    image: pypiserver/pypiserver:latest
+    volumes:
+      - ppb-python-packages:/data/packages # pre-build packages directory
+    networks:
+      - ppb-network
+    #command: 'run --verbose --passwords ? --authenticate "download,list,update"'
+    restart: always
+
+networks:
+  ppb-network:
+
+volumes:
+  ppb-claude-home:
+    driver: local
+  ppb-codex-home:
+    driver: local
+  ppb-python-packages:
+    driver: local

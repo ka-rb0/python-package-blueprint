@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage*
+htmlcov/
+venv/
+.venv/
+
+# Editor / OS
+# (.vscode/settings.json is deliberately tracked; ignore the rest)
+.vscode/*
+!.vscode/settings.json
+.DS_Store
+
+# Claude Code local overrides (machine-specific, not shared)
+.claude/settings.local.json
+
+# cache
+.cache
+
+# envs
+*.env
+
+# Node
+node_modules/
+
+# Host data shared with the dev container
+# Repeated here because prettier only reads the root .gitignore
+shared_folder/data/*
