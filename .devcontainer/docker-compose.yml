@@ -71,7 +71,7 @@ services:
     # -a . -P .: disable auth entirely (pypiserver otherwise requires it for
     # uploads by default, even with no --passwords file) - fine for a
     # container-network-only, throwaway dev index. Lock it down with e.g.
-    # 'run --verbose --passwords ? --authenticate "download,list,update"' 
+    # 'run --verbose --passwords ? --authenticate "download,list,update"'
     # to use passwords.
     command: run --verbose -a . -P . /data/packages
 
