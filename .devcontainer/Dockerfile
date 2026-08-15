@@ -2,7 +2,7 @@
 
 # uv installs the locked dependencies below. A named stage rather than a
 # direct COPY --from=<image>: Dependabot only bumps FROM lines.
-FROM ghcr.io/astral-sh/uv:0.12.3@sha256:2d890623d310b57771ce840f0da5eed5fc6d657da05ffaa45d82797b53fa3abc AS uv
+FROM ghcr.io/astral-sh/uv:0.12.5@sha256:e85be844203885286c60ffad8a858d48afb6c5a5c237ca0e67f12e74b8f174b1 AS uv
 
 # Node.js comes from the official image - digest-pinned and Dependabot-bumped
 # like the other base images. The Debian release (trixie) matches the Python
@@ -13,7 +13,7 @@ FROM node:26-slim@sha256:4ebb5ace66f15a24c14c492e01a8beeed4fddf970a856109f5126e7
 
 # Pinned to the same Python line as requires-python in pyproject.toml;
 # Dependabot bumps both tags and digests (see .github/dependabot.yml).
-FROM python:3.14-slim@sha256:a7fb1e634c4a578f9e0bd6327f11a3cde11b7a9395f48e24360c0988bcc5c2bc AS base
+FROM python:3.14-slim@sha256:ce40764625a4ff50df3548277632e7f96c4e77fe75fa848aae9885476e7df5a4 AS base
 
 COPY --from=uv /uv /uvx /usr/local/bin/
 
@@ -32,7 +32,7 @@ COPY --from=uv /uv /uvx /usr/local/bin/
 ENV UV_PROJECT_ENVIRONMENT=/usr/local
 RUN --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     --mount=type=bind,source=uv.lock,target=uv.lock \
-    uv sync --locked --no-cache --inexact --no-default-groups
+    uv sync --locked --no-cache --inexact --no-default-groups --no-install-project
 
 # The dev and agent stages form the desktop-development branch.
 FROM base AS dev
@@ -72,7 +72,7 @@ ENV NODE_PATH=/opt/npm-tools/node_modules
 # exact versions in uv.lock.
 RUN --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     --mount=type=bind,source=uv.lock,target=uv.lock \
-    uv sync --locked --no-cache --inexact
+    uv sync --locked --no-cache --inexact --no-install-project
 
 FROM dev AS agent
 
