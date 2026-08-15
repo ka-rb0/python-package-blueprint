@@ -62,7 +62,6 @@ services:
     networks:
       - ppb-network
     #command: 'run --verbose --passwords ? --authenticate "download,list,update"'
-    restart: always
 
 networks:
   ppb-network:
