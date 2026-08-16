@@ -1,0 +1,55 @@
+# CodeQL static analysis of the python package. Findings appear under the
+# repo's Security tab (Code scanning alerts). Advisory, not a merge gate -
+# `lint` and `test` are the only required checks (.github/rulesets/).
+#
+# Free for PUBLIC repos only. If you clone/fork this repo and make it private,
+# delete this workflow (or disable it in the Actions tab) - code scanning on
+# private repos requires paid GitHub Advanced Security, and the results upload
+# fails without it.
+#
+# Same pinning rules as ci.yml: actions pinned to commit SHAs, kept current by
+# Dependabot.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly re-scan: CodeQL's query packs improve continuously, so unchanged
+    # code can grow new findings between pushes.
+    - cron: "22 3 * * 1"
+
+# A new push on the same branch/PR supersedes an in-flight run. Scheduled runs
+# share this group (github.ref is the default branch there too), so exempt
+# them - the weekly re-scan is the one run nothing else repeats.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
+
+# default to nothing; the job grants itself exactly what it needs
+permissions: {}
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read # checkout
+      security-events: write # upload the analysis results
+    # One language today; the matrix is where a project built from this
+    # template adds more (one parallel job each, and one failing language
+    # shouldn't cancel the others).
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # don't leave the workflow token in .git/config for later steps
+          persist-credentials: false
+      - uses: github/codeql-action/init@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
+        with:
+          languages: ${{ matrix.language }}
+      - uses: github/codeql-action/analyze@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
