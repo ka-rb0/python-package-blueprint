@@ -8,11 +8,11 @@ project layout a package built from this blueprint is expected to follow.
 
 from importlib.metadata import PackageNotFoundError, version
 
-from example_package.core import greet
+from example_package.core import Person, greet, is_person, parse_person
 
 try:
     __version__ = version("python-package-blueprint")
 except PackageNotFoundError:  # pragma: no cover - only if the package isn't installed
     __version__ = "0.0.0"
 
-__all__ = ["__version__", "greet"]
+__all__ = ["Person", "__version__", "greet", "is_person", "parse_person"]

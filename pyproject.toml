@@ -24,7 +24,7 @@ classifiers = [
 # Dependabot); these are floors. Install without the dev tooling:
 # `uv sync --no-default-groups`.
 dependencies = [
-  "pydantic>=2.13.4",
+  "pydantic[email]>=2.13.4",
 ]
 authors = [
   { name = "ka-rb0" }
