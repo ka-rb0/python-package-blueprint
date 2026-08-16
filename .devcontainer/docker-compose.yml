@@ -28,6 +28,7 @@ services:
       - /workspace/.ruff_cache
       - /workspace/.mypy_cache
       - /workspace/.venv
+      - /workspace/.hypothesis
       - /workspace/node_modules
     environment:
       # No "${PYTHONPATH}:" prefix: an empty leading entry would put the
