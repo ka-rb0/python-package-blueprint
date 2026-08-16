@@ -18,7 +18,7 @@ services:
     volumes:
       # persistent host dir mappings
       - ..:/workspace
-      - ${DATA_PATH_HOST:?-../shared_folder/data}:${DATA_PATH_DOCKER:?set it in .devcontainer/.env, see .env.example}
+      - ${DATA_PATH_HOST:-../shared_folder/data}:${DATA_PATH_DOCKER:?set it in .devcontainer/.env, see .env.example}
       # persistent virtual drive mappings
       - ppb-claude-home:/root/.claude
       - ppb-codex-home:/root/.codex
