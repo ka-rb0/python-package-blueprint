@@ -17,6 +17,10 @@ agents. Every piece is wired up and exercised end to end - see
 - **Dependency management**: `uv.lock` pins exact versions for both runtime
   (`[project.dependencies]`) and dev tooling (`[dependency-groups]`, PEP
   735). `package-lock.json` does the same for the npm-based formatters.
+- **Logging**: `LOG_LEVEL` / `LOG_FORMAT` pick the threshold and the shape -
+  human-readable text, or one JSON object per line (built with `json.dumps`,
+  with the timestamp, exception and `extra={...}` fields a log pipeline
+  expects). Diagnostics go to stderr so stdout stays the command's output.
 - **Quality gates**: `ruff` (lint + format), `mypy --strict`, `codespell`,
   `pytest` with a 100% coverage floor, `prettier`, and `markdownlint-cli2` -
   see `scripts/` below.
@@ -63,7 +67,9 @@ npm ci     # prettier / markdownlint-cli2, from package-lock.json
 
 1. Rename `src/example_package/` to your real package name and delete the
    sample code and tests inside it (`tests/test_core.py`,
-   `tests/test_cli.py`) - keep `tests/test_node_version_consistency.py`.
+   `tests/test_cli.py`) - keep `tests/test_node_version_consistency.py` and
+   `tests/conftest.py`. `logging_config.py` (and its tests) is meant to be
+   kept and adapted rather than deleted.
 2. Update `[project]` in `pyproject.toml`: `name`, `description`, the
    `packages` path under `[tool.hatch.build.targets.wheel]`, and
    `[project.scripts]` if you don't want a console script.
