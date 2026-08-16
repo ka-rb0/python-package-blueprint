@@ -87,6 +87,10 @@ _FORMATTERS: Final[Mapping[str, Callable[[], logging.Formatter]]] = {
 
 logger = logging.getLogger(__name__)
 
+# Our handler on the root logger is tagged with this so a later call can find
+# and replace exactly the one we installed - see configure_logging.
+HANDLER_NAME: Final = "example_package"
+
 
 def configure_logging() -> None:
     """
@@ -97,22 +101,34 @@ def configure_logging() -> None:
     traceback, nor pass silently and leave someone reading logs at the wrong
     level or in the wrong shape.
 
-    Safe to call more than once per process (e.g. across tests): `force=True`
-    replaces the existing handler, rebinding to the current sys.stderr.
+    Safe to call more than once per process: each call replaces the handler
+    the previous one installed, rebinding to the current sys.stderr.
+
+    Deliberately not `logging.basicConfig(force=True)`. That closes every
+    handler already on the root logger, including ones this package did not
+    install, and a closed handler is not merely detached - a `mode="w"`
+    FileHandler refuses to reopen, so it silently drops every record from
+    then on. Anything importing this module (a host application, a test
+    runner) would lose its own logging with no error. Own only what you
+    installed.
     """
     levels = logging.getLevelNamesMapping()
     level_name = os.environ.get("LOG_LEVEL", _DEFAULT_LEVEL).upper()
     format_name = os.environ.get("LOG_FORMAT", _DEFAULT_FORMAT).lower()
 
-    handler = logging.StreamHandler(sys.stderr)
-    handler.setFormatter(_FORMATTERS.get(format_name, _FORMATTERS[_DEFAULT_FORMAT])())
-    logging.basicConfig(
-        level=levels.get(level_name, levels[_DEFAULT_LEVEL]),
-        handlers=[handler],
-        force=True,
-    )
+    root = logging.getLogger()
+    for installed in root.handlers[:]:
+        if installed.name == HANDLER_NAME:
+            root.removeHandler(installed)
+            installed.close()
 
-    # After basicConfig, so these go through the handler just installed.
+    handler = logging.StreamHandler(sys.stderr)
+    handler.set_name(HANDLER_NAME)
+    handler.setFormatter(_FORMATTERS.get(format_name, _FORMATTERS[_DEFAULT_FORMAT])())
+    root.addHandler(handler)
+    root.setLevel(levels.get(level_name, levels[_DEFAULT_LEVEL]))
+
+    # After the handler is installed, so these go through it.
     if level_name not in levels:
         logger.warning("unknown LOG_LEVEL %r - using %s", level_name, _DEFAULT_LEVEL)
     if format_name not in _FORMATTERS:

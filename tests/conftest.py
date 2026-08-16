@@ -5,20 +5,24 @@ from collections.abc import Iterator
 
 import pytest
 
+from example_package.logging_config import HANDLER_NAME
+
 
 @pytest.fixture(autouse=True)
-def restore_root_logger() -> Iterator[None]:
+def reset_logging() -> Iterator[None]:
     """
-    Undo whatever a test did to the root logger.
+    Undo what a test's `configure_logging()` call left on the root logger.
 
-    `configure_logging` calls `logging.basicConfig(force=True)`, which closes
-    and drops every existing root handler - including the one pytest's own
-    logging plugin installs for caplog. Without this, the first test to
-    configure logging would quietly change how every later test sees log
-    output, and the order tests happen to run in would start to matter.
+    Its handler holds the `sys.stderr` capsys swapped in for that one test, and
+    the root level it set would otherwise decide what later tests log. Only
+    handlers this package installed are touched - pytest's own (caplog,
+    `--log-file`) are left alone, so both keep working.
     """
     root = logging.getLogger()
-    handlers, level = root.handlers[:], root.level
+    level = root.level
     yield
-    root.handlers[:] = handlers
+    for handler in root.handlers[:]:
+        if handler.name == HANDLER_NAME:
+            root.removeHandler(handler)
+            handler.close()
     root.setLevel(level)

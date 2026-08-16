@@ -15,9 +15,8 @@ def test_greet_prints_to_stdout(capsys: pytest.CaptureFixture[str]) -> None:
 
 
 def test_greet_rejects_blank_name(capsys: pytest.CaptureFixture[str]) -> None:
-    # capsys, not caplog: configure_logging's force=True rebinds the root
-    # handler to the live sys.stderr on every call, which drops caplog's own
-    # handler - exercising that reconfigurability is the point of force=True.
+    # capsys, not caplog: configure_logging installs its own handler bound to
+    # the live sys.stderr, which is where the message under test comes out.
     exit_code = main(["greet", "   "])
 
     assert exit_code == 1

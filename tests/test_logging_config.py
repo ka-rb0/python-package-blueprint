@@ -1,5 +1,6 @@
 """Tests for example_package.logging_config."""
 
+import io
 import json
 import logging
 from collections.abc import Mapping
@@ -10,7 +11,11 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from example_package.logging_config import JsonFormatter, configure_logging
+from example_package.logging_config import (
+    HANDLER_NAME,
+    JsonFormatter,
+    configure_logging,
+)
 
 
 def make_record(
@@ -73,13 +78,23 @@ def test_deferred_arguments_are_interpolated() -> None:
 
 
 def test_timestamp_is_rfc3339_utc() -> None:
+    # A fixed instant, not time.time(): comparing a formatted timestamp back
+    # against the float it came from is a flake waiting to happen, because
+    # fromtimestamp rounds to the nearest microsecond and can cross a
+    # millisecond boundary upwards while isoformat truncates downwards.
+    record = make_record()
+    record.created = 1_700_000_000.123456
+
+    assert render(record)["timestamp"] == "2023-11-14T22:13:20.123+00:00"
+
+
+def test_timestamp_reflects_the_record_not_the_formatting_time() -> None:
     record = make_record()
 
     timestamp = datetime.fromisoformat(render(record)["timestamp"])
 
     assert timestamp.tzinfo == UTC
-    # Truncated to milliseconds, so it trails record.created by under one.
-    assert 0 <= record.created - timestamp.timestamp() < 0.001
+    assert abs(record.created - timestamp.timestamp()) < 1
 
 
 def test_exception_is_included_when_present() -> None:
@@ -164,6 +179,24 @@ def test_unknown_level_warns_and_falls_back(
     stderr = capsys.readouterr().err
     assert "unknown LOG_LEVEL 'VERBOSE' - using INFO" in stderr
     assert "dropped at INFO" not in stderr
+
+
+def test_reconfiguring_replaces_only_our_own_handler() -> None:
+    root = logging.getLogger()
+    stream = io.StringIO()
+    foreign = logging.StreamHandler(stream)
+    root.addHandler(foreign)
+    try:
+        configure_logging()
+        configure_logging()
+
+        assert [handler.name for handler in root.handlers].count(HANDLER_NAME) == 1
+        # basicConfig(force=True) would have closed this one out from under
+        # whoever installed it; it has to still be attached and still working.
+        logging.getLogger("tests.example").warning("still alive")
+        assert "still alive" in stream.getvalue()
+    finally:
+        root.removeHandler(foreign)
 
 
 def test_unknown_format_warns_and_falls_back(
