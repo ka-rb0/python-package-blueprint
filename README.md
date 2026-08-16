@@ -25,10 +25,12 @@ agents. Every piece is wired up and exercised end to end - see
   `pytest` with a 100% coverage floor, `prettier`, and `markdownlint-cli2` -
   see `scripts/` below.
 - **Security**: `pip-audit` and `npm audit` check locked dependencies
-  against advisory databases; `zizmor` lints the GitHub Actions workflows.
-  `.github/workflows/audit.yml` reruns them weekly; `.github/dependabot.yml`
-  keeps every pin (Python, npm, the Dockerfile's base images, Actions)
-  current.
+  against advisory databases; `zizmor` lints the GitHub Actions workflows;
+  CodeQL scans the source itself (`.github/workflows/codeql.yml` - public
+  repos only, see the note at the top of that file).
+  `.github/workflows/audit.yml` reruns the dependency audits weekly;
+  `.github/dependabot.yml` keeps every pin (Python, npm, the Dockerfile's
+  base images, Actions) current.
 - **CI**: `.github/workflows/ci.yml` runs the same gates on every push/PR,
   plus a build job that verifies the built wheel actually installs and runs.
 - **Local gates**: `.githooks/pre-push` runs lint + test before every push
