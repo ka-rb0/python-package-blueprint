@@ -9,12 +9,13 @@ name = "python-package-blueprint"
 dynamic = ["version"]
 description = "A Python package blueprint."
 readme = "README.md"
-requires-python = "==3.14.*"
+requires-python = ">=3.14"
 license = "MIT"  # PEP 639 license expression
 license-files = ["LICENSE"]
 classifiers = [
   "Programming Language :: Python :: 3.14",
   "Typing :: Typed",  # src/example_package/py.typed ships type info - PEP 561
+  "Development Status :: 4 - Beta",
 ]
 # What the package itself needs at run time. Standards-level metadata
 # (PEP 621) rather than a dependency group, so every tool that reads PEP 621
@@ -25,33 +26,12 @@ classifiers = [
 dependencies = [
   "pydantic>=2.13.4",
 ]
+authors = [
+  { name = "ka-rb0" }
+]
 
 [project.scripts]
 example-package = "example_package.cli:main"
-
-[tool.hatch.version]
-source = "vcs"
-
-[tool.hatch.build.targets.wheel]
-# "python-package-blueprint" (this template's own name - not a real package
-# name to keep) doesn't normalize to the "example_package" import name below,
-# so hatchling needs the mapping spelled out explicitly.
-packages = ["src/example_package"]
-
-[tool.hatch.build.targets.sdist]
-# An explicit allowlist rather than an exclude list. Hatchling's default
-# sdist selection is "everything git-tracks" - fine for reproducibility, but
-# it drags in devcontainer/CI/lint tooling that a downstream build or
-# `pip download --no-binary` has no use for and that only grows over time as
-# an exclude list would need to keep chasing. Only what's needed to build the
-# wheel and satisfy [project] metadata belongs here: the source, and
-# README.md/LICENSE because `readme` and `license-files` above point at them
-# (hatchling needs them present to reproduce that metadata from the sdist).
-include = [
-  "src/example_package",
-  "README.md",
-  "LICENSE",
-]
 
 [dependency-groups]
 # Development-only dependencies (PEP 735) - runtime requirements live in
@@ -82,6 +62,33 @@ dev = [
   "pytest-cov>=7.0.0",
   "pyyaml>=6.0.3",
   "types-pyyaml>=6.0.12",
+]
+
+[project.urls]
+Repository = "https://github.com/ka-rb0/python-package-blueprint"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+# "python-package-blueprint" (this template's own name - not a real package
+# name to keep) doesn't normalize to the "example_package" import name below,
+# so hatchling needs the mapping spelled out explicitly.
+packages = ["src/example_package"]
+
+[tool.hatch.build.targets.sdist]
+# An explicit allowlist rather than an exclude list. Hatchling's default
+# sdist selection is "everything git-tracks" - fine for reproducibility, but
+# it drags in devcontainer/CI/lint tooling that a downstream build or
+# `pip download --no-binary` has no use for and that only grows over time as
+# an exclude list would need to keep chasing. Only what's needed to build the
+# wheel and satisfy [project] metadata belongs here: the source, and
+# README.md/LICENSE because `readme` and `license-files` above point at them
+# (hatchling needs them present to reproduce that metadata from the sdist).
+include = [
+  "src/example_package",
+  "README.md",
+  "LICENSE",
 ]
 
 [tool.codespell]

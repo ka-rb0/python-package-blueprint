@@ -45,13 +45,12 @@ npm ci     # prettier / markdownlint-cli2, from package-lock.json
 
 ## Everyday commands
 
-| Command         | What it does                                              |
-| --------------- | --------------------------------------------------------- |
-| `scripts/lint`  | Every read-only check (ruff, mypy, codespell, ...).       |
-| `scripts/fix`   | Auto-fixes the fixable subset of `scripts/lint`.          |
-| `scripts/test`  | The test suite, with coverage enforced (`--offline` skips |
-|                 | tests marked `online`).                                   |
-| `scripts/audit` | Security audits that need network access.                 |
+| Command         | What it does                                                                      |
+| --------------- | --------------------------------------------------------------------------------- |
+| `scripts/lint`  | Every read-only check (ruff, mypy, codespell, ...).                               |
+| `scripts/fix`   | Auto-fixes the fixable subset of `scripts/lint`.                                  |
+| `scripts/test`  | The test suite, with coverage enforced (`--offline` skips tests marked `online`). |
+| `scripts/audit` | Security audits that need network access.                                         |
 
 ## Special commands
 
@@ -70,6 +69,11 @@ npm ci     # prettier / markdownlint-cli2, from package-lock.json
    `[project.scripts]` if you don't want a console script.
 3. Add your runtime dependencies to `[project.dependencies]`.
 4. Update this README.
+
+## URLs
+
+- [GitHub repo](https://github.com/ka-rb0/python-package-blueprint)
+- [PyPI package](https://pypi.org/project/python-package-blueprint/)
 
 ## License
 
