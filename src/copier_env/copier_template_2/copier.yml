@@ -1,0 +1,12 @@
+# questions
+project_name:
+    type: str
+    help: What is your project name?
+
+docker_image:
+    type: str
+    help: Which Docker image do you want to use?
+    choices:
+        Nginx (web server): nginx:alpine
+        Postgres (database): postgres:16-alpine
+    default: nginx:alpine

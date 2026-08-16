@@ -1,0 +1,16 @@
+services:
+  app:
+    image: {{ docker_image }}
+    container_name: {{ project_name }}
+    restart: unless-stopped
+{%- if docker_image.startswith("nginx") %}
+    ports:
+      - "8080:80"
+{%- else %}
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: {{ project_name }}
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: {{ project_name }}
+{%- endif %}
