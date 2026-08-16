@@ -34,7 +34,8 @@ concurrency:
 permissions:
   contents: read
   # Exchanged for a short-lived PyPI upload credential via Trusted
-  # Publishing - see the `uv publish` step below.
+  # Publishing, and used to sign the PEP 740 attestations - see the publish
+  # step below.
   id-token: write
 
 jobs:
@@ -61,8 +62,21 @@ jobs:
           enable-cache: false
       - name: Build sdist and wheel
         run: uv build
-      # --trusted-publishing always: fail loudly if the OIDC exchange isn't
-      # available/configured, rather than silently falling back to some
-      # other (absent) credential.
+      # Upload via PyPA's action rather than `uv publish`: it also generates
+      # and uploads PEP 740 digital attestations (`attestations: true`, the
+      # default - spelled out here because it's the reason this step isn't
+      # `uv publish`, which can't produce them). Each artifact in dist/ gets
+      # a Sigstore-signed statement binding it to this workflow's identity,
+      # which PyPI verifies on upload and then shows on the release page, so
+      # consumers can check that a file really came from this repo's
+      # publish.yml. Needs the id-token: write granted above.
+      #
+      # No `password` input, so the action uses Trusted Publishing (OIDC) -
+      # same credential path as before. It fails loudly if the exchange
+      # isn't available rather than falling back to an (absent) token,
+      # matching what `--trusted-publishing always` gave us.
       - name: Publish to PyPI
-        run: uv publish --trusted-publishing always
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          attestations: true
+          print-hash: true
