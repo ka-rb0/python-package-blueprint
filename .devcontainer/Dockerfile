@@ -9,7 +9,7 @@ FROM ghcr.io/astral-sh/uv:0.12.5@sha256:e85be844203885286c60ffad8a858d48afb6c5a5
 # image, so the copied binary finds matching shared libraries. The major must
 # match engines.node in package.json; tests/test_node_version_consistency.py
 # enforces that.
-FROM node:26-slim@sha256:4ebb5ace66f15a24c14c492e01a8beeed4fddf970a856109f5126e703e5fe503 AS node
+FROM node:26-slim@sha256:c0753125a3789977aefe869cbebccf70e3cfd7ea84ca48547458f02e4f1d7146 AS node
 
 # Pinned to the same Python line as requires-python in pyproject.toml;
 # Dependabot bumps both tags and digests (see .github/dependabot.yml).
