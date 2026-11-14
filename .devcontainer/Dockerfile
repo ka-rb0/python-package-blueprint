@@ -2,7 +2,7 @@
 
 # uv installs the locked dependencies below. A named stage rather than a
 # direct COPY --from=<image>: Dependabot only bumps FROM lines.
-FROM ghcr.io/astral-sh/uv:0.12.5@sha256:e85be844203885286c60ffad8a858d48afb6c5a5c237ca0e67f12e74b8f174b1 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.8@sha256:5cc1805e2426484abca4ad46ea783bab281fdb225fd82d8ce6d66a81254bac85 AS uv
 
 # Node.js comes from the official image - digest-pinned and Dependabot-bumped
 # like the other base images. The Debian release (trixie) matches the Python
@@ -13,7 +13,7 @@ FROM node:26-slim@sha256:4ebb5ace66f15a24c14c492e01a8beeed4fddf970a856109f5126e7
 
 # Pinned to the same Python line as requires-python in pyproject.toml;
 # Dependabot bumps both tags and digests (see .github/dependabot.yml).
-FROM python:3.14-slim@sha256:ce40764625a4ff50df3548277632e7f96c4e77fe75fa848aae9885476e7df5a4 AS base
+FROM python:3.15-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS base
 
 COPY --from=uv /uv /uvx /usr/local/bin/
 
